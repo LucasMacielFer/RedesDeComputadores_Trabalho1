@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 
 #ifdef _WIN32
     #include <winsock2.h>
@@ -18,7 +19,14 @@
 class udpSocket
 {
 private:
-    unsigned char ipAddress[16];
+    static int instanceCount;
+
+#ifdef _WIN32
+    SOCKET sock;
+#else
+    int sock;
+#endif
+    unsigned char localIpAddress[16];
     uint16_t port;
     bool isIpv6;
     bool socketIsBound;
@@ -28,8 +36,7 @@ public:
     ~udpSocket();
     void bind(const unsigned char* ip, uint16_t port, bool ipv6);
     bool isBound() const;
-    void setSocketOptions();
-    void sendTo(const unsigned char* data, size_t length);
-    void recvFrom(unsigned char* buffer, size_t bufferSize, size_t& receivedLength);
+    bool sendTo(const unsigned char* data, size_t length, const unsigned char* destIp, uint16_t destPort);
+    bool recvFrom(unsigned char* buffer, size_t bufferSize, size_t& receivedLength, unsigned char* srcIp, uint16_t& srcPort);
     void close();
 };
