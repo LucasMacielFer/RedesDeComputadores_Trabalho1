@@ -26,7 +26,6 @@ private:
 #else
     int sock;
 #endif
-    unsigned char localIpAddress[16];
     uint16_t port;
     bool isIpv6;
     bool socketIsBound;
@@ -34,7 +33,7 @@ private:
 public:
     udpSocket();
     ~udpSocket();
-    void bind(const unsigned char* ip, uint16_t port, bool ipv6);
+    void bind(uint16_t port, bool ipv6);
     bool isBound() const;
     bool sendTo(const unsigned char* data, size_t length, const unsigned char* destIp, uint16_t destPort);
     bool recvFrom(unsigned char* buffer, size_t bufferSize, size_t& receivedLength, unsigned char* srcIp, uint16_t& srcPort);

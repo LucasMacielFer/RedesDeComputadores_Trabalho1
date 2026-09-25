@@ -3,9 +3,7 @@
 int udpSocket::instanceCount = 0;
 
 udpSocket::udpSocket()
-{
-    memset(localIpAddress, 0, sizeof(localIpAddress));
- 
+{ 
 #ifdef _WIN32
     sock = INVALID_SOCKET;
 #endif
@@ -32,7 +30,7 @@ udpSocket::~udpSocket() {
     }
 }
 
-void udpSocket::bind(const unsigned char* ip, uint16_t port, bool ipv6)
+void udpSocket::bind(uint16_t port, bool ipv6)
 {
     sock = ::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -51,7 +49,7 @@ void udpSocket::bind(const unsigned char* ip, uint16_t port, bool ipv6)
         sockaddr_in6 addr{};
         addr.sin6_family = AF_INET6;
         addr.sin6_port = htons(port);
-        memcpy(&addr.sin6_addr, ip, 16);
+        addr.sin6_addr = in6addr_any;
  
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
@@ -64,7 +62,7 @@ void udpSocket::bind(const unsigned char* ip, uint16_t port, bool ipv6)
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_port = htons(port);
-        memcpy(&addr.sin_addr, ip, 4);
+        addr.sin_addr.s_addr = INADDR_ANY;
  
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
@@ -75,8 +73,6 @@ void udpSocket::bind(const unsigned char* ip, uint16_t port, bool ipv6)
  
     isIpv6 = ipv6;
     this->port = port;
-    memset(localIpAddress, 0, sizeof(localIpAddress));
-    memcpy(localIpAddress, ip, ipv6 ? 16 : 4);
     socketIsBound = true;
 }
 

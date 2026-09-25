@@ -7,7 +7,7 @@ int main()
     unsigned char destIp[4]  = {127, 0, 0, 1};
  
     udpSocket sender;
-    sender.bind(localIp, 2004, false);
+    sender.bind(2004, false);
  
     if (!sender.isBound())
     {
