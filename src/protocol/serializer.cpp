@@ -9,22 +9,27 @@ namespace Protocol
 
     std::vector<uint8_t> Serializer::serialize(const Segment& segment)
     {
-        if (segment.payload.size() > MAX_PAYLOAD_SIZE)
+        if(segment.payload.size() > MAX_PAYLOAD_SIZE)
         {
-            std::cerr << "ERRO: Tamanho do payload excede o limite máximo de " << MAX_PAYLOAD_SIZE << " bytes." << std::endl;
+            throw std::invalid_argument("ERRO: Tamanho do payload excede o limite máximo de " + std::to_string(MAX_PAYLOAD_SIZE) + " bytes.");
+        }
+        if(segment.payload.size() != segment.segmentHeader.payloadLength)
+        {
+            throw std::invalid_argument("ERRO: Tamanho do payload diferente do tamanho declarado no header.");
         }
 
-        std::vector<uint8_t> serializedData(HEADER_SIZE + segment.segmentHeader.payloadLength);
+        std::vector<uint8_t> serializedData(HEADER_SIZE + segment.segmentHeader.payloadLength);        
         memcpy(serializedData.data(), &segment.segmentHeader, HEADER_SIZE);
         memcpy(serializedData.data() + HEADER_SIZE, segment.payload.data(), segment.segmentHeader.payloadLength);
         return serializedData;
     }
 
-    Segment Serializer::deserialize(const std::vector<uint8_t>& data)
+    std::optional<Segment> Serializer::deserialize(const std::vector<uint8_t>& data)
     {
         if (data.size() < HEADER_SIZE)
         {
             std::cerr << "ERRO: Dados insuficientes para desserializar o segmento." << std::endl;
+            return std::nullopt;
         }
 
         Segment segment;
