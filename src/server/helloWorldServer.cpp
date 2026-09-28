@@ -5,7 +5,7 @@ int main()
 {
     unsigned char localIp[4] = {127, 0, 0, 1};
  
-    udpSocket receiver;
+    UdpSocket receiver;
     receiver.bind(2005, false);
  
     if (!receiver.isBound())

@@ -1,8 +1,8 @@
 #include "../include/udpSocket.h"
 
-int udpSocket::instanceCount = 0;
+int UdpSocket::instanceCount = 0;
 
-udpSocket::udpSocket()
+UdpSocket::UdpSocket()
 { 
 #ifdef _WIN32
     sock = INVALID_SOCKET;
@@ -18,7 +18,7 @@ udpSocket::udpSocket()
     instanceCount++;
 }
 
-udpSocket::~udpSocket() {
+UdpSocket::~UdpSocket() {
     close();
  
     instanceCount--;
@@ -30,7 +30,7 @@ udpSocket::~udpSocket() {
     }
 }
 
-void udpSocket::bind(uint16_t port, bool ipv6)
+void UdpSocket::bind(uint16_t port, bool ipv6)
 {
     sock = ::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
@@ -40,7 +40,7 @@ void udpSocket::bind(uint16_t port, bool ipv6)
     if (sock < 0)
 #endif
     {
-        printf("ERRO: Erro ao criar socket\n");
+        std::cerr << "ERRO: Erro ao criar socket" << std::endl;
         return;
     }
  
@@ -53,7 +53,7 @@ void udpSocket::bind(uint16_t port, bool ipv6)
  
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
-            printf("ERRO: Erro ao dar bind (IPv6)\n");
+            std::cerr << "ERRO: Erro ao dar bind (IPv6)" << std::endl;
             return;
         }
     }
@@ -66,7 +66,7 @@ void udpSocket::bind(uint16_t port, bool ipv6)
  
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
-            printf("ERRO: Erro ao dar bind (IPv4)\n");
+            std::cerr << "ERRO: Erro ao dar bind (IPv4)" << std::endl;
             return;
         }
     }
@@ -76,16 +76,16 @@ void udpSocket::bind(uint16_t port, bool ipv6)
     socketIsBound = true;
 }
 
-bool udpSocket::isBound() const
+bool UdpSocket::isBound() const
 {
     return socketIsBound;
 }
 
-bool udpSocket::sendTo(const unsigned char* data, size_t length, const unsigned char* destIp, uint16_t destPort)
+bool UdpSocket::sendTo(const uint8_t* data, size_t length, const uint8_t* destIp, uint16_t destPort)
 {
     if (!socketIsBound)
     {
-        printf("ERRO: Socket sem bind\n");
+        std::cerr << "ERRO: Socket sem bind" << std::endl;
         return false;
     }
  
@@ -98,7 +98,7 @@ bool udpSocket::sendTo(const unsigned char* data, size_t length, const unsigned 
         addr.sin6_port = htons(destPort);
         memcpy(&addr.sin6_addr, destIp, 16);
  
-        result = ::sendto(sock, (const char*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
+        result = ::sendto(sock, (const uint8_t*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
     }
     else
     {
@@ -107,32 +107,32 @@ bool udpSocket::sendTo(const unsigned char* data, size_t length, const unsigned 
         addr.sin_port = htons(destPort);
         memcpy(&addr.sin_addr, destIp, 4);
  
-        result = ::sendto(sock, (const char*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
+        result = ::sendto(sock, (const uint8_t*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
     }
  
     if (result < 0)
     {
-        printf("ERRO: Erro ao enviar dados\n");
+        std::cerr << "ERRO: Erro ao enviar dados" << std::endl;
         return false;
     }
     return true;
 }
 
-bool udpSocket::recvFrom(unsigned char* buffer, size_t bufferSize, size_t& receivedLength, unsigned char* srcIp, uint16_t& srcPort)
+bool UdpSocket::recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, uint8_t* srcIp, uint16_t& srcPort)
 {
     if (!socketIsBound)
     {
-        printf("ERRO: Socket sem bind\n");
+        std::cerr << "ERRO: Socket sem bind" << std::endl;
         return false;
     }
  
     sockaddr_storage fromAddr{};
     socklen_t fromLen = sizeof(fromAddr);
  
-    int result = ::recvfrom(sock, (char*)buffer, (int)bufferSize, 0, (sockaddr*)&fromAddr, &fromLen);
+    int result = ::recvfrom(sock, (uint8_t*)buffer, (int)bufferSize, 0, (sockaddr*)&fromAddr, &fromLen);
     if (result < 0)
     {
-        printf("ERRO: Erro ao receber dados\n");
+        std::cerr << "ERRO: Erro ao receber dados" << std::endl;
         return false;
     }
  
@@ -155,7 +155,7 @@ bool udpSocket::recvFrom(unsigned char* buffer, size_t bufferSize, size_t& recei
     return true;
 }
 
-void udpSocket::close()
+void UdpSocket::close()
 {
 #ifdef _WIN32
     if (sock != INVALID_SOCKET)
