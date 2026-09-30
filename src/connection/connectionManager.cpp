@@ -57,40 +57,37 @@ namespace Connection
         connections.clear();
     }
 
-    void ConnectionManager::onDataReceived(const uint8_t* data, size_t length, const uint8_t* peerIp, uint16_t peerPort)
+    void ConnectionManager::onDataReceived(const uint8_t* data, size_t length, const Network::Endpoint& peerEndpoint)
     {
-        std::vector<uint8_t> dataVector(data, data + length);
-        std::optional<Protocol::Segment> segmentOpt = Protocol::Serializer::deserialize(dataVector);
-
-        if(segmentOpt != std::nullopt)
+        Connection* connection = findConnection(peerEndpoint);
+        if(connection == nullptr)
         {
-            Protocol::Segment segment = segmentOpt.value();
-            Connection* connection = findConnection(peerIp, peerPort, false, segment.segmentHeader.connectionId);
-
-            if(connection != nullptr)
-            {
-                connection->handleSegment(segment);
-            }
-            else
-            {
-                connection = createConnection(peerIp, peerPort, false, segment.segmentHeader.connectionId);
-                connection->handleSegment(segment);
-            }
+            connection = createConnection(peerEndpoint);
         }
-        else
-        {
-            std::cerr << "ERRO: Falha ao desserializar o segmento recebido." << std::endl;
-        }
+        connection->handleDataReceived(data, length);
     }
 
-    Connection* ConnectionManager::findConnection(const uint8_t* peerIp, uint16_t peerPort, bool isIpv6, uint32_t connectionId)
+    Connection* ConnectionManager::findConnection(const Network::Endpoint& peerEndpoint)
     {
+        bool isPeerIpv6 = peerEndpoint.isIpv6;
+        uint16_t peerPort = peerEndpoint.port;
+        const uint8_t* peerIp = peerEndpoint.ip;
+
+        Network::Endpoint connEndpoint;
+        bool isConnIpv6;
+        uint16_t connPort;
+        const uint8_t* connIp;
+
         for(Connection* connection : connections)
-        {
-            if(connection->getPeerPort() == peerPort &&
-               memcmp(connection->getPeerIp(), peerIp, isIpv6 ? 16 : 4) == 0 &&
-               connection->isPeerIpv6() == isIpv6 &&
-               connection->getConnectionId() == connectionId)
+        {   
+            connEndpoint = connection->getPeerEndpoint();
+            isConnIpv6 = connEndpoint.isIpv6;
+            connPort = connEndpoint.port;
+            connIp = connEndpoint.ip;
+
+            if(isPeerIpv6 == isConnIpv6 &&
+               peerPort == connPort &&
+               memcmp(peerIp, connIp, isPeerIpv6 ? 16 : 4) == 0)
             {
                 return connection;
             }
@@ -98,12 +95,11 @@ namespace Connection
         return nullptr;
     }
     
-    Connection* ConnectionManager::createConnection(const uint8_t* peerIp, uint16_t peerPort, bool isIpv6, uint32_t connectionId)
+    Connection* ConnectionManager::createConnection(const Network::Endpoint& peerEndpoint)
     {
-        Connection* newConnection = new Connection(peerIp, peerPort, isIpv6);
-        newConnection->setConnectionId(connectionId);
+        Connection* newConnection = new Connection(peerEndpoint);
         connections.push_back(newConnection);
-        std::cout << "Nova conexao criada: " << (isIpv6 ? "IPv6" : "IPv4") << " - " << Utils::IpFormatter::formatIp(peerIp, isIpv6) << ":" << peerPort << std::endl;
+        std::cout << "Nova conexao criada: " << (peerEndpoint.isIpv6 ? "IPv6" : "IPv4") << " - " << Utils::IpFormatter::formatIp(peerEndpoint.ip, peerEndpoint.isIpv6) << ":" << peerEndpoint.port << std::endl;
         return newConnection;
     }
 }

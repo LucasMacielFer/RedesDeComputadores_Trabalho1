@@ -19,7 +19,6 @@ namespace Protocol
 
     struct Header
     {
-        uint32_t connectionId;
         uint32_t sequenceNumber;
         uint32_t acknowledgmentNumber;
         uint32_t crc32Checksum;

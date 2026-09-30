@@ -2,6 +2,7 @@
 #include "udpSocket.h"
 #include "protocol/serializer.h"
 #include <vector>
+#include <chrono>
 
 namespace Connection
 {
@@ -21,23 +22,43 @@ namespace Connection
     class Connection
     {
     private:
-        uint16_t peerPort;
-        uint8_t peerIp[16];
-        bool peerIpv6;
-        uint32_t connectionId;
+        Network::Endpoint peerEndpoint;
         ConnectionState state;
 
-    public:
-        Connection(const uint8_t* ip, uint16_t port, bool ipv6);
-        ~Connection();
+        uint32_t nextSendSequence;
+        uint32_t nextReceiveSequence;
 
-        const uint16_t getPeerPort() const;
-        const uint8_t* getPeerIp() const;
-        const bool isPeerIpv6() const;
-        const uint32_t getConnectionId() const;
-        
+        bool waitingAck;
+        uint32_t pendingSequence;
+
+        std::vector<uint8_t> pendingPacket;
+
+        std::chrono::steady_clock::time_point timerStart;
+
+        bool hasRttSample;
+        std::chrono::milliseconds srtt;
+        std::chrono::milliseconds rttvar;
+        std::chrono::milliseconds rto;
+
+        bool packetWasRetransmitted;
+
+    public:
+        Connection(const Network::Endpoint peerEndpoint);
+        ~Connection();
+        const Network::Endpoint& getPeerEndpoint() const;
+        ConnectionState getState() const;
+        void handleDataReceived(const uint8_t* data, size_t length);
+        bool sendData(const uint8_t* data, size_t length);
+        void update();
+
+    private:
         void handleSegment(const Protocol::Segment& segment);
-        void sendSegment(const Protocol::Segment& segment, UdpSocket& udpSocket);
-        void setConnectionId(uint32_t id);
+        void sendSegment(const Protocol::Segment& segment, Network::UdpSocket& udpSocket);
+        bool sendAck(uint32_t sequence);
+        bool retransmitPending();
+        void startTimer();
+        void stopTimer();
+        bool timeoutExpired() const;
+        void updateRto(std::chrono::milliseconds rtt);
     };
 }

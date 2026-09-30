@@ -1,6 +1,6 @@
 #pragma once
 #include "connection/connection.h"
-#include "udpSocket.h"
+#include "network/udpSocket.h"
 #include "protocol/serializer.h"
 #include "utils/ipFormatter.h"
 
@@ -10,16 +10,16 @@ namespace Connection
     {
     private:
         std::vector<Connection*> connections;
-        UdpSocket udpSocket4;
-        UdpSocket udpSocket6;
+        Network::UdpSocket udpSocket4;
+        Network::UdpSocket udpSocket6;
 
     public:
         ConnectionManager(uint16_t port);
         ~ConnectionManager();
-        void onDataReceived(const uint8_t* data, size_t length, const uint8_t* srcIp, uint16_t srcPort);
+        void onDataReceived(const uint8_t* data, size_t length, const Network::Endpoint& peerEndpoint);
 
     private:
-        Connection* findConnection(const uint8_t* peerIp, uint16_t peerPort, bool isIpv6, uint32_t connectionId);
-        Connection* createConnection(const uint8_t* peerIp, uint16_t peerPort, bool isIpv6, uint32_t connectionId);
+        Connection* findConnection(const Network::Endpoint& peerEndpoint);
+        Connection* createConnection(const Network::Endpoint& peerEndpoint);
     };
 }
