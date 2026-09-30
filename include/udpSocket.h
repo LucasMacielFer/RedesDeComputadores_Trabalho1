@@ -27,15 +27,19 @@ private:
     int sock;
 #endif
     uint16_t port;
+    uint8_t localIp[16];
     bool isIpv6;
     bool socketIsBound;
 
 public:
-    UdpSocket();
+    UdpSocket(bool ipv6);
     ~UdpSocket();
-    void bind(uint16_t port, bool ipv6);
+    void bind(uint16_t port);
     bool isBound() const;
     bool sendTo(const uint8_t* data, size_t length, const uint8_t* destIp, uint16_t destPort);
     bool recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, uint8_t* srcIp, uint16_t& srcPort);
     void close();
+
+private:
+    void updateLocalPort();
 };

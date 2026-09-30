@@ -2,7 +2,7 @@
 
 int UdpSocket::instanceCount = 0;
 
-UdpSocket::UdpSocket()
+UdpSocket::UdpSocket(bool ipv6 = true)
 { 
 #ifdef _WIN32
     sock = INVALID_SOCKET;
@@ -14,6 +14,18 @@ UdpSocket::UdpSocket()
         WSADATA wsaData;
         WSAStartup(MAKEWORD(2, 2), &wsaData);
 #endif
+    }
+
+sock = ::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+
+#ifdef _WIN32
+    if (sock == INVALID_SOCKET)
+#else
+    if (sock < 0)
+#endif
+    {
+        std::cerr << "ERRO: Erro ao criar socket" << std::endl;
+        return;
     }
     instanceCount++;
 }
@@ -30,21 +42,9 @@ UdpSocket::~UdpSocket() {
     }
 }
 
-void UdpSocket::bind(uint16_t port, bool ipv6)
+void UdpSocket::bind(uint16_t port)
 {
-    sock = ::socket(ipv6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-
-#ifdef _WIN32
-    if (sock == INVALID_SOCKET)
-#else
-    if (sock < 0)
-#endif
-    {
-        std::cerr << "ERRO: Erro ao criar socket" << std::endl;
-        return;
-    }
- 
-    if (ipv6)
+    if (isIpv6)
     {
         sockaddr_in6 addr{};
         addr.sin6_family = AF_INET6;
@@ -54,6 +54,11 @@ void UdpSocket::bind(uint16_t port, bool ipv6)
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
             std::cerr << "ERRO: Erro ao dar bind (IPv6)" << std::endl;
+        #ifdef _WIN32
+            closesocket(sock);
+        #else
+            ::close(sock);
+        #endif
             return;
         }
     }
@@ -67,11 +72,15 @@ void UdpSocket::bind(uint16_t port, bool ipv6)
         if (::bind(sock, (sockaddr*)&addr, sizeof(addr)) != 0)
         {
             std::cerr << "ERRO: Erro ao dar bind (IPv4)" << std::endl;
+        #ifdef _WIN32
+            closesocket(sock);
+        #else
+            ::close(sock);
+        #endif
             return;
         }
     }
  
-    isIpv6 = ipv6;
     this->port = port;
     socketIsBound = true;
 }
@@ -83,38 +92,74 @@ bool UdpSocket::isBound() const
 
 bool UdpSocket::sendTo(const uint8_t* data, size_t length, const uint8_t* destIp, uint16_t destPort)
 {
-    if (!socketIsBound)
+    if (
+#ifdef _WIN32
+        sock == INVALID_SOCKET
+#else
+        sock < 0
+#endif
+    )
     {
-        std::cerr << "ERRO: Socket sem bind" << std::endl;
+        std::cerr << "ERRO: Socket inválido" << std::endl;
         return false;
     }
- 
+
     int result;
- 
+
     if (isIpv6)
     {
         sockaddr_in6 addr{};
         addr.sin6_family = AF_INET6;
         addr.sin6_port = htons(destPort);
-        memcpy(&addr.sin6_addr, destIp, 16);
- 
-        result = ::sendto(sock, (const uint8_t*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
+
+        memcpy(
+            &addr.sin6_addr,
+            destIp,
+            16
+        );
+
+        result = ::sendto(
+            sock,
+            reinterpret_cast<const char*>(data),
+            static_cast<int>(length),
+            0,
+            reinterpret_cast<sockaddr*>(&addr),
+            sizeof(addr)
+        );
     }
     else
     {
         sockaddr_in addr{};
         addr.sin_family = AF_INET;
         addr.sin_port = htons(destPort);
-        memcpy(&addr.sin_addr, destIp, 4);
- 
-        result = ::sendto(sock, (const uint8_t*)data, (int)length, 0, (sockaddr*)&addr, sizeof(addr));
+
+        memcpy(
+            &addr.sin_addr,
+            destIp,
+            4
+        );
+
+        result = ::sendto(
+            sock,
+            reinterpret_cast<const char*>(data),
+            static_cast<int>(length),
+            0,
+            reinterpret_cast<sockaddr*>(&addr),
+            sizeof(addr)
+        );
     }
- 
+
     if (result < 0)
     {
-        std::cerr << "ERRO: Erro ao enviar dados" << std::endl;
+        std::cerr << "ERRO: Erro ao enviar dados." << std::endl;
         return false;
     }
+
+    if (!socketIsBound)
+    {
+        updateLocalPort();
+    }
+
     return true;
 }
 
@@ -171,4 +216,47 @@ void UdpSocket::close()
     }
 #endif
     socketIsBound = false;
+}
+
+void UdpSocket::updateLocalPort()
+{
+    sockaddr_storage addr{};
+
+#ifdef _WIN32
+    int addrLen = sizeof(addr);
+#else
+    socklen_t addrLen = sizeof(addr);
+#endif
+
+    if (::getsockname(
+            sock,
+            reinterpret_cast<sockaddr*>(&addr),
+            &addrLen) != 0)
+    {
+        std::cerr << "ERRO: Erro ao obter endereço local." << std::endl;
+        return;
+    }
+
+    if (addr.ss_family == AF_INET)
+    {
+        auto* addr4 =
+            reinterpret_cast<sockaddr_in*>(&addr);
+
+        port = ntohs(addr4->sin_port);
+
+        memcpy(localIp, &addr4->sin_addr, 4);
+        isIpv6 = false;
+    }
+    else if (addr.ss_family == AF_INET6)
+    {
+        auto* addr6 =
+            reinterpret_cast<sockaddr_in6*>(&addr);
+
+        port = ntohs(addr6->sin6_port);
+
+        memcpy(localIp, &addr6->sin6_addr, 16);
+        isIpv6 = true;
+    }
+
+    socketIsBound = true;
 }
