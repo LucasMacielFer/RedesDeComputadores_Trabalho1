@@ -18,6 +18,6 @@ namespace Protocol
     public:
         static uint32_t calculateCrc32(const std::vector<uint8_t>& data);
         static std::vector<uint8_t> serialize(const Segment& segment);
-        static std::optional<Segment> deserialize(const std::vector<uint8_t>& data);
+        static Segment deserialize(const std::vector<uint8_t>& data, bool& success);
     };
 }

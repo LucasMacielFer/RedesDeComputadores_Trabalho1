@@ -20,16 +20,22 @@ namespace Protocol
 
         std::vector<uint8_t> serializedData(HEADER_SIZE + segment.segmentHeader.payloadLength);        
         memcpy(serializedData.data(), &segment.segmentHeader, HEADER_SIZE);
-        memcpy(serializedData.data() + HEADER_SIZE, segment.payload.data(), segment.segmentHeader.payloadLength);
+        if(segment.segmentHeader.payloadLength > 0)
+        {
+            memcpy(serializedData.data() + HEADER_SIZE, segment.payload.data(), segment.segmentHeader.payloadLength);
+        }
+        
         return serializedData;
     }
 
-    std::optional<Segment> Serializer::deserialize(const std::vector<uint8_t>& data)
+    Segment Serializer::deserialize(const std::vector<uint8_t>& data, bool& success)
     {
+        success = false;
+
         if (data.size() < HEADER_SIZE)
         {
             std::cerr << "ERRO: Dados insuficientes para desserializar o segmento." << std::endl;
-            return std::nullopt;
+            return Segment();
         }
 
         Segment segment;
@@ -37,6 +43,7 @@ namespace Protocol
         segment.payload.resize(segment.segmentHeader.payloadLength);
         memcpy(segment.payload.data(), data.data() + HEADER_SIZE, segment.segmentHeader.payloadLength);
 
+        success = true;
         return segment;
     }
 }

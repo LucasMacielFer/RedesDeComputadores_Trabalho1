@@ -1,39 +1,28 @@
-#include "udpSocket.h"
-#include <cstdio>
- 
+#include "connection/connectionManager.h"
+#include <string>
+
+#define HELLO_PORT_V4 6000
+#define HELLO_PORT_V6 6001
+
 int main()
 {
-    unsigned char localIp[4] = {127, 0, 0, 1};
- 
-    UdpSocket receiver;
-    receiver.bind(2005, false);
- 
-    if (!receiver.isBound())
+    Connection::ConnectionManager manager(HELLO_PORT_V4, HELLO_PORT_V6);
+
+    manager.setOnDataReceived([](Connection::Connection& connection, const std::vector<uint8_t>& data)
     {
-        printf("Falha ao dar bind na porta 2005\n");
-        return 1;
-    }
- 
-    printf("Aguardando mensagem na porta 2005...\n");
- 
-    unsigned char buffer[1024];
-    size_t receivedLength = 0;
-    unsigned char srcIp[16];
-    uint16_t srcPort = 0;
- 
-    bool ok = receiver.recvFrom(buffer, sizeof(buffer) - 1, receivedLength, srcIp, srcPort);
- 
-    if (ok)
-    {
-        buffer[receivedLength] = '\0'; // transforma em string valida pra printf
-        printf("Recebido de %d.%d.%d.%d:%d -> %s\n",
-               srcIp[0], srcIp[1], srcIp[2], srcIp[3], srcPort, buffer);
-    }
-    else
-    {
-        printf("Falha ao receber mensagem\n");
-    }
- 
-    receiver.close();
+        const std::string message(data.begin(), data.end());
+        std::cout << "[APP] Mensagem recebida: " << message << std::endl;
+
+        const std::string reply = "Hello Client";
+        connection.sendData(reinterpret_cast<const uint8_t*>(reply.data()), reply.size());
+        connection.setOnIdle([&connection]()
+        {
+            connection.close();
+        });
+    });
+
+    std::cout << "[APP] Servidor aguardando (IPv4 " << HELLO_PORT_V4 << ", IPv6 " << HELLO_PORT_V6 << ")..." << std::endl;
+    manager.run();
+
     return 0;
 }

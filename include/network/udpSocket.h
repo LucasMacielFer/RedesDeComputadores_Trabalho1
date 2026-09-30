@@ -1,8 +1,9 @@
-#pragma once 
+#pragma once
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <iostream>
+#include <chrono>
 #include "network/endpoint.h"
 
 #ifdef _WIN32
@@ -12,6 +13,7 @@
     #include <arpa/inet.h>
     #include <netinet/in.h>
     #include <sys/socket.h>
+    #include <sys/select.h>
     #include <unistd.h>
 #else
     #error "Sistema operacional desconhecido. Este projeto suporta somente Windows e Unix."
@@ -37,8 +39,10 @@ namespace Network
         ~UdpSocket();
         void bind(uint16_t port);
         bool isBound() const;
-        bool sendTo(const uint8_t* data, size_t length, const uint8_t* destIp, uint16_t destPort);
-        bool recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, uint8_t* srcIp, uint16_t& srcPort);
+        bool sendTo(const uint8_t* data, size_t length, const Endpoint& destEndpoint);
+        bool recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, Endpoint& srcEndpoint);
+        bool waitForData(std::chrono::milliseconds timeout) const;
+
         void close();
 
     private:

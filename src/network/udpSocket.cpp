@@ -8,6 +8,7 @@ namespace Network
     { 
         localEndpoint = {};
         localEndpoint.isIpv6 = ipv6;
+        socketIsBound = false;
 
     #ifdef _WIN32
         sock = INVALID_SOCKET;
@@ -95,7 +96,7 @@ namespace Network
         return socketIsBound;
     }
 
-    bool UdpSocket::sendTo(const uint8_t* data, size_t length, const uint8_t* destIp, uint16_t destPort)
+    bool UdpSocket::sendTo(const uint8_t* data, size_t length, const Endpoint& destEndpoint)
     {
         if (
     #ifdef _WIN32
@@ -105,7 +106,13 @@ namespace Network
     #endif
         )
         {
-            std::cerr << "ERRO: Socket inválido" << std::endl;
+            std::cerr << "ERRO: Socket invalido." << std::endl;
+            return false;
+        }
+
+        if(destEndpoint.isIpv6 != localEndpoint.isIpv6)
+        {
+            std::cerr << "ERRO: Tipo de IP do destino nao corresponde ao tipo de IP do socket." << std::endl;
             return false;
         }
 
@@ -115,11 +122,11 @@ namespace Network
         {
             sockaddr_in6 addr{};
             addr.sin6_family = AF_INET6;
-            addr.sin6_port = htons(destPort);
+            addr.sin6_port = htons(destEndpoint.port);
 
             memcpy(
                 &addr.sin6_addr,
-                destIp,
+                destEndpoint.ip,
                 16
             );
 
@@ -136,11 +143,11 @@ namespace Network
         {
             sockaddr_in addr{};
             addr.sin_family = AF_INET;
-            addr.sin_port = htons(destPort);
+            addr.sin_port = htons(destEndpoint.port);
 
             memcpy(
                 &addr.sin_addr,
-                destIp,
+                destEndpoint.ip,
                 4
             );
 
@@ -168,7 +175,7 @@ namespace Network
         return true;
     }
 
-    bool UdpSocket::recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, uint8_t* srcIp, uint16_t& srcPort)
+    bool UdpSocket::recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, Endpoint& srcEndpoint)
     {
         if (!socketIsBound)
         {
@@ -188,21 +195,42 @@ namespace Network
     
         receivedLength = (size_t)result;
     
-        memset(srcIp, 0, 16);
+        memset(srcEndpoint.ip, 0, 16);
         if (fromAddr.ss_family == AF_INET6)
         {
             sockaddr_in6* addr6 = (sockaddr_in6*)&fromAddr;
-            memcpy(srcIp, &addr6->sin6_addr, 16);
-            srcPort = ntohs(addr6->sin6_port);
+            memcpy(srcEndpoint.ip, &addr6->sin6_addr, 16);
+            srcEndpoint.port = ntohs(addr6->sin6_port);
+            srcEndpoint.isIpv6 = true;
         }
         else
         {
             sockaddr_in* addr4 = (sockaddr_in*)&fromAddr;
-            memcpy(srcIp, &addr4->sin_addr, 4);
-            srcPort = ntohs(addr4->sin_port);
+            memcpy(srcEndpoint.ip, &addr4->sin_addr, 4);
+            srcEndpoint.port = ntohs(addr4->sin_port);
+            srcEndpoint.isIpv6 = false;
         }
     
         return true;
+    }
+
+    bool UdpSocket::waitForData(std::chrono::milliseconds timeout) const
+    {
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(sock, &readSet);
+
+        timeval tv{};
+        tv.tv_sec = static_cast<long>(timeout.count() / 1000);
+        tv.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
+
+    #ifdef _WIN32
+        const int result = ::select(0, &readSet, nullptr, nullptr, &tv);
+    #else
+        const int result = ::select(sock + 1, &readSet, nullptr, nullptr, &tv);
+    #endif
+
+        return result > 0 && FD_ISSET(sock, &readSet);
     }
 
     void UdpSocket::close()
