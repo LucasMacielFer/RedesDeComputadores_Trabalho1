@@ -1,14 +1,10 @@
 #include "server/server.h"
 #include <chrono>
-#include <thread>
 
 namespace FileTransfer
 {
     namespace
     {
-        constexpr size_t MAX_CHUNK_PAYLOAD = Protocol::Serializer::MAX_PAYLOAD_SIZE - 1;
-        constexpr std::chrono::milliseconds CHUNK_SEND_DELAY{10};
-
         void appendUint64(std::vector<uint8_t>& out, uint64_t value)
         {
             const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&value);
@@ -76,8 +72,6 @@ namespace FileTransfer
             std::cout << "[SERVER] Transferencia concluida do lado do servidor; aguardando confirmacao do cliente." << std::endl;
             return;
         }
-
-        std::this_thread::sleep_for(CHUNK_SEND_DELAY);
 
         const std::vector<uint8_t> chunk = session->readNextChunk(MAX_CHUNK_PAYLOAD);
 

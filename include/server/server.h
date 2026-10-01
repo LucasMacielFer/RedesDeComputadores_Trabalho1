@@ -5,6 +5,8 @@
 #include <filesystem>
 #include <memory>
 
+#define MAX_CHUNK_PAYLOAD Protocol::Serializer::MAX_PAYLOAD_SIZE - 1
+
 namespace FileTransfer
 {
     class Server

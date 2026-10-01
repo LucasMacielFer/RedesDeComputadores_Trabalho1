@@ -186,7 +186,7 @@ namespace Network
         sockaddr_storage fromAddr{};
         socklen_t fromLen = sizeof(fromAddr);
     
-        int result = ::recvfrom(sock, (uint8_t*)buffer, (int)bufferSize, 0, (sockaddr*)&fromAddr, &fromLen);
+        int result = ::recvfrom(sock, reinterpret_cast<char*>(buffer), (int)bufferSize, 0, (sockaddr*)&fromAddr, &fromLen);
         if (result < 0)
         {
             std::cerr << "ERRO: Erro ao receber dados" << std::endl;
