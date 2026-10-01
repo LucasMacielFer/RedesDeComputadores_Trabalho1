@@ -15,7 +15,7 @@ namespace Connection
         {
             for(int i = 0; i < 3; ++i)
             {
-                std::cerr << "ERRO: Falha ao vincular o socket UDP IPv4 a porta " << ipv4Port << ". Tentativa " << (i + 1) << " de 3." << std::endl;
+                std::cerr << "[CMANAGER] ERRO: Falha ao vincular o socket UDP IPv4 a porta " << ipv4Port << ". Tentativa " << (i + 1) << " de 3." << std::endl;
                 udpSocket4.bind(ipv4Port);
 
                 if(udpSocket4.isBound())
@@ -25,7 +25,7 @@ namespace Connection
 
         if(!udpSocket4.isBound())
         {
-            std::cerr << "ERRO: Falha ao vincular o socket UDP IPv4 a porta " << ipv4Port << " apos 3 tentativas." << std::endl;
+            std::cerr << "[CMANAGER] ERRO: Falha ao vincular o socket UDP IPv4 a porta " << ipv4Port << " apos 3 tentativas." << std::endl;
             exit(EXIT_FAILURE);
         }
 
@@ -51,7 +51,7 @@ namespace Connection
 
     ConnectionManager::~ConnectionManager()
     {
-        std::cout << "Liberando conexoes..." << std::endl;
+        std::cout << "[CMANAGER] Liberando conexoes..." << std::endl;
         for(Connection* connection : connections)
         {
             delete connection;
@@ -81,12 +81,25 @@ namespace Connection
 
         while (true)
         {
-            if (udpSocket4.waitForData(POLL_INTERVAL))
+            bool v4Ready = false;
+            bool v6Ready = false;
+            Network::UdpSocket::waitForEither(udpSocket4, udpSocket6, POLL_INTERVAL, v4Ready, v6Ready);
+
+            if (v4Ready)
             {
                 size_t receivedLength;
                 Network::Endpoint srcEndpoint;
 
                 if (udpSocket4.recvFrom(buffer, sizeof(buffer), receivedLength, srcEndpoint))
+                    onDataReceived(buffer, receivedLength, srcEndpoint);
+            }
+
+            if (v6Ready)
+            {
+                size_t receivedLength;
+                Network::Endpoint srcEndpoint;
+
+                if (udpSocket6.recvFrom(buffer, sizeof(buffer), receivedLength, srcEndpoint))
                     onDataReceived(buffer, receivedLength, srcEndpoint);
             }
 
@@ -148,7 +161,7 @@ namespace Connection
         }
 
         connections.push_back(newConnection);
-        std::cout << "Nova conexao criada: " << (peerEndpoint.isIpv6 ? "IPv6" : "IPv4") << " - " << Utils::IpFormatter::formatIp(peerEndpoint.ip, peerEndpoint.isIpv6) << ":" << peerEndpoint.port << std::endl;
+        std::cout << "[CMANAGER] Nova conexao criada: " << (peerEndpoint.isIpv6 ? "IPv6" : "IPv4") << " - " << Utils::IpFormatter::formatIp(peerEndpoint.ip, peerEndpoint.isIpv6) << ":" << peerEndpoint.port << std::endl;
         return newConnection;
     }
 }

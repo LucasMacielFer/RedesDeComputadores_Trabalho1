@@ -87,7 +87,6 @@ namespace Connection
         segment.segmentHeader.sequenceNumber = nextSendSequence;
         segment.segmentHeader.acknowledgmentNumber = 0;
         segment.segmentHeader.flags = Protocol::SYN;
-        segment.segmentHeader.resultCode = Protocol::SUCCESS;
         segment.segmentHeader.payloadLength = 0;
         segment.payload = {};
         segment.segmentHeader.crc32Checksum = Protocol::Serializer::calculateCrc32(segment.payload);
@@ -147,7 +146,6 @@ namespace Connection
         segment.segmentHeader.sequenceNumber = nextSendSequence;
         segment.segmentHeader.acknowledgmentNumber = 0;
         segment.segmentHeader.flags = 0;
-        segment.segmentHeader.resultCode = Protocol::SUCCESS;
         segment.segmentHeader.payloadLength = static_cast<uint16_t>(length);
         segment.segmentHeader.crc32Checksum = Protocol::Serializer::calculateCrc32(segment.payload);
 
@@ -190,7 +188,6 @@ namespace Connection
         segment.segmentHeader.sequenceNumber = nextSendSequence;
         segment.segmentHeader.acknowledgmentNumber = 0;
         segment.segmentHeader.flags = Protocol::FIN;
-        segment.segmentHeader.resultCode = Protocol::SUCCESS;
         segment.segmentHeader.payloadLength = 0;
         segment.payload = {};
         segment.segmentHeader.crc32Checksum = Protocol::Serializer::calculateCrc32(segment.payload);
@@ -229,20 +226,6 @@ namespace Connection
     void Connection::handleSegment(const Protocol::Segment& segment)
     {
         const Protocol::Header& header = segment.segmentHeader;
-
-        if (header.resultCode != Protocol::SUCCESS)
-        {
-            std::cout << "[REQUEST FAILED] " << (header.resultCode == Protocol::FILE_NOT_FOUND ? "Arquivo nao encontrado" : "Permissao negada")
-                       << " (" << peerLabel(peerEndpoint) << ")" << std::endl;
-
-            waitingAck = false;
-            pendingDataPacket.clear();
-            stopTimer();
-            packetWasRetransmitted = false;
-            retryCount = 0;
-            state = CLOSED;
-            return;
-        }
 
         const bool ack = (header.flags & Protocol::ACK) != 0;
         const bool nack = (header.flags & Protocol::NACK) != 0;
@@ -418,7 +401,6 @@ namespace Connection
         response.segmentHeader.sequenceNumber = nextSendSequence;
         response.segmentHeader.acknowledgmentNumber = sequence;
         response.segmentHeader.flags = Protocol::ACK;
-        response.segmentHeader.resultCode = Protocol::SUCCESS;
         response.segmentHeader.payloadLength = 0;
         response.payload = {};
         response.segmentHeader.crc32Checksum = Protocol::Serializer::calculateCrc32(response.payload);
@@ -438,7 +420,6 @@ namespace Connection
         response.segmentHeader.sequenceNumber = nextSendSequence;
         response.segmentHeader.acknowledgmentNumber = sequence;
         response.segmentHeader.flags = Protocol::NACK;
-        response.segmentHeader.resultCode = Protocol::SUCCESS;
         response.segmentHeader.payloadLength = 0;
         response.payload = {};
         response.segmentHeader.crc32Checksum = Protocol::Serializer::calculateCrc32(response.payload);

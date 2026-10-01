@@ -1,17 +1,28 @@
+#pragma once
+#include <cstdint>
+#include <vector>
+
 namespace Protocol
 {
-    enum Flags : uint8_t
+    enum Flags : uint16_t
     {
         SYN = 1 << 0,
         ACK = 1 << 1,
-        NACK = 1 << 3,
-        FIN = 1 << 2
+        NACK = 1 << 2,
+        FIN = 1 << 3
     };
 
-    enum ResultCode : uint8_t
+    enum ApplicationCodes : uint8_t
     {
-        SUCCESS = 0,
-        FILE_NOT_FOUND = 1,
+        REQUEST = 0x01,
+        METADATA = 0x02,
+        DATA = 0x03,
+        FILE_ERROR = 0x04
+    };
+
+    enum FileErrorReason : uint8_t
+    {
+        NOT_FOUND = 1,
         PERMISSION_DENIED = 2
     };
 
@@ -21,8 +32,7 @@ namespace Protocol
         uint32_t acknowledgmentNumber;
         uint32_t crc32Checksum;
         uint16_t payloadLength;
-        uint8_t flags;
-        uint8_t resultCode;
+        uint16_t flags;
     };
 
     struct Segment

@@ -233,6 +233,34 @@ namespace Network
         return result > 0 && FD_ISSET(sock, &readSet);
     }
 
+    void UdpSocket::waitForEither(const UdpSocket& first, const UdpSocket& second, std::chrono::milliseconds timeout, bool& firstReady, bool& secondReady)
+    {
+        firstReady = false;
+        secondReady = false;
+
+        fd_set readSet;
+        FD_ZERO(&readSet);
+        FD_SET(first.sock, &readSet);
+        FD_SET(second.sock, &readSet);
+
+        timeval tv{};
+        tv.tv_sec = static_cast<long>(timeout.count() / 1000);
+        tv.tv_usec = static_cast<long>((timeout.count() % 1000) * 1000);
+
+    #ifdef _WIN32
+        const int result = ::select(0, &readSet, nullptr, nullptr, &tv);
+    #else
+        const int maxFd = first.sock > second.sock ? first.sock : second.sock;
+        const int result = ::select(maxFd + 1, &readSet, nullptr, nullptr, &tv);
+    #endif
+
+        if (result <= 0)
+            return;
+
+        firstReady = FD_ISSET(first.sock, &readSet);
+        secondReady = FD_ISSET(second.sock, &readSet);
+    }
+
     void UdpSocket::close()
     {
     #ifdef _WIN32

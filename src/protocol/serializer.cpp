@@ -2,9 +2,14 @@
 
 namespace Protocol
 {
-    uint32_t Serializer::calculateCrc32(const std::vector<uint8_t>& data)
+    uint32_t Serializer::calculateCrc32(const uint8_t* data, size_t length, uint32_t seed)
     {
-        return crc32(0L, data.data(), data.size());
+        return static_cast<uint32_t>(crc32(seed, data, static_cast<uInt>(length)));
+    }
+
+    uint32_t Serializer::calculateCrc32(const std::vector<uint8_t>& data, uint32_t seed)
+    {
+        return calculateCrc32(data.data(), data.size(), seed);
     }
 
     std::vector<uint8_t> Serializer::serialize(const Segment& segment)

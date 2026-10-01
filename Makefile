@@ -2,14 +2,15 @@ CXXFLAGS = -std=c++17 -Iinclude
 LDLIBS = -lz
 
 COMMON_SRC = src/network/udpSocket.cpp src/protocol/serializer.cpp src/connection/connection.cpp src/connection/connectionManager.cpp
+FILE_SRC = $(COMMON_SRC) src/file/fileSerializer.cpp src/file/fileAssembler.cpp src/server/server.cpp
 
-all: build/server build/client
+all: build/fileServer build/fileClient
 
-build/server: $(COMMON_SRC) src/server/helloWorldServer.cpp
+build/fileServer: $(FILE_SRC) src/server/fileServer.cpp
 	g++ $(CXXFLAGS) $^ -o $@ $(LDLIBS)
 
-build/client: $(COMMON_SRC) src/client/helloWorldClient.cpp
+build/fileClient: $(COMMON_SRC) src/file/fileAssembler.cpp src/client/client.cpp src/client/fileClient.cpp
 	g++ $(CXXFLAGS) $^ -o $@ $(LDLIBS)
 
 clean:
-	rm -f build/server build/client
+	rm -f build/fileServer build/fileClient

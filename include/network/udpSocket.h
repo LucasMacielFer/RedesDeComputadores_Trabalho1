@@ -43,6 +43,8 @@ namespace Network
         bool recvFrom(uint8_t* buffer, size_t bufferSize, size_t& receivedLength, Endpoint& srcEndpoint);
         bool waitForData(std::chrono::milliseconds timeout) const;
 
+        static void waitForEither(const UdpSocket& first, const UdpSocket& second, std::chrono::milliseconds timeout, bool& firstReady, bool& secondReady);
+
         void close();
 
     private:
